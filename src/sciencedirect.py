@@ -3,6 +3,7 @@ Simple ScienceDirect API client wrapper for searching and retrieving articles.
 """
 
 import os
+import json
 from typing import List, Dict, Optional, Any
 import httpx
 from dotenv import load_dotenv
@@ -30,9 +31,10 @@ class ScienceDirectClient:
     SEARCH_URL = f"{BASE_URL}/search/sciencedirect"
     ARTICLE_URL = f"{BASE_URL}/article/pii"
     
-    def __init__(self, api_key: Optional[str] = None, inst_token: Optional[str] = None):
+    def __init__(self, api_key: Optional[str] = None, inst_token: Optional[str] = None, debug: bool = False):
         self.api_key = api_key or os.getenv("ELSEVIER_API_KEY")
         self.inst_token = inst_token or os.getenv("ELSEVIER_INST_TOKEN")
+        self.debug = debug or os.getenv("DEBUG", "").lower() in ("true", "1", "yes")
         
         if not self.api_key:
             raise ValueError("Elsevier API key is required. Set ELSEVIER_API_KEY in .env")
@@ -44,6 +46,13 @@ class ScienceDirectClient:
         
         if self.inst_token:
             self.headers["X-ELS-Insttoken"] = self.inst_token
+    
+    def _debug_log(self, message: str, data: Any = None):
+        """Log debug information if debug mode is enabled."""
+        if self.debug:
+            print(f"[DEBUG] {message}")
+            if data:
+                print(f"[DEBUG DATA] {json.dumps(data, indent=2) if isinstance(data, dict) else data}")
     
     async def search_articles(self, query: str, limit: int = 10) -> List[Article]:
         """
@@ -62,6 +71,8 @@ class ScienceDirectClient:
             "httpAccept": "application/json"
         }
         
+        self._debug_log(f"Searching articles with query: {query}", {"params": params, "url": self.SEARCH_URL})
+        
         async with httpx.AsyncClient() as client:
             try:
                 response = await client.get(
@@ -70,19 +81,33 @@ class ScienceDirectClient:
                     params=params,
                     timeout=30.0
                 )
+                
+                self._debug_log(f"Response status: {response.status_code}")
+                
                 response.raise_for_status()
                 data = response.json()
+                
+                self._debug_log("Response data received", data)
                 
                 return self._parse_search_results(data)
                 
             except httpx.HTTPStatusError as e:
+                error_detail = {
+                    "status_code": e.response.status_code,
+                    "response_text": e.response.text,
+                    "headers": dict(e.response.headers),
+                    "url": str(e.response.url)
+                }
+                self._debug_log("HTTP Error occurred", error_detail)
+                
                 if e.response.status_code == 401:
-                    raise ValueError("Invalid API key or authentication failed")
+                    raise ValueError(f"Invalid API key or authentication failed. Debug: {json.dumps(error_detail) if self.debug else 'Enable debug mode for details'}")
                 elif e.response.status_code == 429:
-                    raise ValueError("Rate limit exceeded. Please try again later")
+                    raise ValueError(f"Rate limit exceeded. Please try again later. Debug: {json.dumps(error_detail) if self.debug else 'Enable debug mode for details'}")
                 else:
-                    raise ValueError(f"API request failed: {e.response.status_code} - {e.response.text}")
+                    raise ValueError(f"API request failed: {e.response.status_code} - {e.response.text[:500] if self.debug else 'Enable debug mode for full error'}")
             except Exception as e:
+                self._debug_log(f"Unexpected error: {type(e).__name__}: {str(e)}")
                 raise ValueError(f"Search failed: {str(e)}")
     
     async def get_article(self, pii: str) -> Article:
@@ -97,6 +122,8 @@ class ScienceDirectClient:
         """
         url = f"{self.ARTICLE_URL}/{pii}"
         
+        self._debug_log(f"Getting article with PII: {pii}", {"url": url})
+        
         async with httpx.AsyncClient() as client:
             try:
                 response = await client.get(
@@ -104,17 +131,31 @@ class ScienceDirectClient:
                     headers=self.headers,
                     timeout=30.0
                 )
+                
+                self._debug_log(f"Response status: {response.status_code}")
+                
                 response.raise_for_status()
                 data = response.json()
+                
+                self._debug_log("Article data received", data)
                 
                 return self._parse_article(data)
                 
             except httpx.HTTPStatusError as e:
+                error_detail = {
+                    "status_code": e.response.status_code,
+                    "response_text": e.response.text,
+                    "headers": dict(e.response.headers),
+                    "url": str(e.response.url)
+                }
+                self._debug_log("HTTP Error occurred", error_detail)
+                
                 if e.response.status_code == 404:
-                    raise ValueError(f"Article with PII {pii} not found")
+                    raise ValueError(f"Article with PII {pii} not found. Debug: {json.dumps(error_detail) if self.debug else 'Enable debug mode for details'}")
                 else:
-                    raise ValueError(f"Failed to retrieve article: {e.response.status_code}")
+                    raise ValueError(f"Failed to retrieve article: {e.response.status_code} - {e.response.text[:500] if self.debug else 'Enable debug mode for full error'}")
             except Exception as e:
+                self._debug_log(f"Unexpected error: {type(e).__name__}: {str(e)}")
                 raise ValueError(f"Article retrieval failed: {str(e)}")
     
     def _parse_search_results(self, data: Dict[str, Any]) -> List[Article]:

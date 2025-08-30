@@ -99,7 +99,8 @@ async def answer_research_question(
     question: str,
     max_articles: int = 5,
     api_key: Optional[str] = None,
-    inst_token: Optional[str] = None
+    inst_token: Optional[str] = None,
+    debug: bool = False
 ) -> ResearchResponse:
     """
     Main function to answer a research question using the agent.
@@ -109,12 +110,13 @@ async def answer_research_question(
         max_articles: Maximum number of articles to search
         api_key: Elsevier API key (optional, uses env if not provided)
         inst_token: Institutional token (optional)
+        debug: Enable debug mode for detailed error information
         
     Returns:
         ResearchResponse with answer and supporting articles
     """
     # Initialize the ScienceDirect client
-    client = ScienceDirectClient(api_key=api_key, inst_token=inst_token)
+    client = ScienceDirectClient(api_key=api_key, inst_token=inst_token, debug=debug)
     
     # Create dependencies
     deps = ResearchDependencies(client=client)
@@ -153,7 +155,8 @@ async def chat_with_agent(
         api_key: Elsevier API key
         inst_token: Institutional token
     """
-    client = ScienceDirectClient(api_key=api_key, inst_token=inst_token)
+    debug = os.getenv("DEBUG", "").lower() in ("true", "1", "yes")
+    client = ScienceDirectClient(api_key=api_key, inst_token=inst_token, debug=debug)
     deps = ResearchDependencies(client=client)
     
     print("Scientific Research Assistant")

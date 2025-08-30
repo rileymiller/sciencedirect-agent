@@ -23,7 +23,8 @@ console = Console()
 @app.command()
 def chat(
     api_key: Optional[str] = typer.Option(None, "--api-key", "-k", help="Elsevier API key"),
-    inst_token: Optional[str] = typer.Option(None, "--inst-token", "-t", help="Institutional token")
+    inst_token: Optional[str] = typer.Option(None, "--inst-token", "-t", help="Institutional token"),
+    debug: bool = typer.Option(False, "--debug", "-d", help="Enable debug mode for detailed error information")
 ):
     """
     Start an interactive chat session with the research agent.
@@ -44,6 +45,10 @@ def chat(
         console.print("Set ELSEVIER_API_KEY in .env or use --api-key option")
         raise typer.Exit(1)
     
+    # Set debug mode in environment if enabled
+    if debug:
+        os.environ["DEBUG"] = "true"
+    
     try:
         asyncio.run(chat_with_agent(api_key, inst_token))
     except KeyboardInterrupt:
@@ -58,7 +63,8 @@ def search(
     query: str = typer.Argument(..., help="Search query for articles"),
     limit: int = typer.Option(5, "--limit", "-l", help="Maximum number of results"),
     api_key: Optional[str] = typer.Option(None, "--api-key", "-k", help="Elsevier API key"),
-    inst_token: Optional[str] = typer.Option(None, "--inst-token", "-t", help="Institutional token")
+    inst_token: Optional[str] = typer.Option(None, "--inst-token", "-t", help="Institutional token"),
+    debug: bool = typer.Option(False, "--debug", "-d", help="Enable debug mode for detailed error information")
 ):
     """
     Search for scientific articles on ScienceDirect.
@@ -71,7 +77,7 @@ def search(
         raise typer.Exit(1)
     
     async def run_search():
-        client = ScienceDirectClient(api_key, inst_token)
+        client = ScienceDirectClient(api_key, inst_token, debug=debug)
         
         with console.status("[cyan]Searching articles...[/cyan]"):
             try:
@@ -133,7 +139,8 @@ def ask(
     question: str = typer.Argument(..., help="Research question to answer"),
     max_articles: int = typer.Option(5, "--max-articles", "-m", help="Maximum articles to analyze"),
     api_key: Optional[str] = typer.Option(None, "--api-key", "-k", help="Elsevier API key"),
-    inst_token: Optional[str] = typer.Option(None, "--inst-token", "-t", help="Institutional token")
+    inst_token: Optional[str] = typer.Option(None, "--inst-token", "-t", help="Institutional token"),
+    debug: bool = typer.Option(False, "--debug", "-d", help="Enable debug mode for detailed error information")
 ):
     """
     Ask a research question and get an AI-powered answer with citations.
@@ -151,6 +158,10 @@ def ask(
         console.print("Set OPENAI_API_KEY in .env file")
         raise typer.Exit(1)
     
+    # Set debug mode in environment if enabled
+    if debug:
+        os.environ["DEBUG"] = "true"
+    
     async def run_research():
         with console.status("[cyan]Researching your question...[/cyan]", spinner="dots"):
             try:
@@ -158,7 +169,8 @@ def ask(
                     question,
                     max_articles,
                     api_key,
-                    inst_token
+                    inst_token,
+                    debug=debug
                 )
                 
                 # Display the answer
