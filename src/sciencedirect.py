@@ -31,8 +31,9 @@ class ScienceDirectClient:
     SEARCH_URL = f"{BASE_URL}/search/sciencedirect"
     ARTICLE_URL = f"{BASE_URL}/article/pii"
     
-    def __init__(self, api_key: Optional[str] = None, inst_token: Optional[str] = None, debug: bool = False):
+    def __init__(self, api_key: Optional[str] = None, auth_token: Optional[str] = None, inst_token: Optional[str] = None, debug: bool = False):
         self.api_key = api_key or os.getenv("ELSEVIER_API_KEY")
+        self.auth_token = auth_token or os.getenv("ELSEVIER_AUTH_TOKEN")
         self.inst_token = inst_token or os.getenv("ELSEVIER_INST_TOKEN")
         self.debug = debug or os.getenv("DEBUG", "").lower() in ("true", "1", "yes")
         
@@ -43,6 +44,9 @@ class ScienceDirectClient:
             "X-ELS-APIKey": self.api_key,
             "Accept": "application/json"
         }
+        
+        if self.auth_token:
+            self.headers["X-ELS-Authtoken"] = self.auth_token
         
         if self.inst_token:
             self.headers["X-ELS-Insttoken"] = self.inst_token
