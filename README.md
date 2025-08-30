@@ -319,14 +319,14 @@ See [DEBUG.md](DEBUG.md) for detailed debugging information.
 
 ```
 sciencedirect-agent/
-   src/
-      agent.py         # Pydantic-AI agent implementation
-      sciencedirect.py # ScienceDirect API client
-      cli.py           # Typer CLI interface
-   tests/
-      test_agent.py    # Basic tests
-   .env                 # API keys (not in git)
-   pyproject.toml       # Project configuration
+   src/
+      agent.py         # Pydantic-AI agent implementation
+      sciencedirect.py # ScienceDirect API client
+      cli.py           # Typer CLI interface
+   tests/
+      test_agent.py    # Basic tests
+   .env                 # API keys (not in git)
+   pyproject.toml       # Project configuration
 ```
 
 ## Testing
